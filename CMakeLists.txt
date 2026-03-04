@@ -16,8 +16,11 @@ add_executable(FileManager
   main.cpp
 
   filemanager.h filemanager.cpp
-  filelog.h filelog.cpp
+
+
   file.h file.cpp
+
+
 
 )
 target_link_libraries(FileManager Qt${QT_VERSION_MAJOR}::Core)
