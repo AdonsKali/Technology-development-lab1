@@ -1,11 +1,20 @@
+// filemanager.h
 #ifndef FILEMANAGER_H
 #define FILEMANAGER_H
 
 #include <QObject>
 #include <QMap>
-#include <QTimer>
-#include <QSharedPointer>
-#include "file.h"
+#include <QFileInfo>
+#include <memory>
+#include "logger.h"
+
+struct FileState {
+    bool exists;
+    qint64 size;
+
+    FileState() : exists(false), size(0) {}
+    FileState(bool e, qint64 s) : exists(e), size(s) {}
+};
 
 class FileManager : public QObject
 {
@@ -16,27 +25,24 @@ public:
 
     FileManager(const FileManager&) = delete;
     FileManager& operator=(const FileManager&) = delete;
-    bool isMonitoring() const { return m_isMonitoring; }
+
+    void setLogger(std::shared_ptr<Logger> logger);
 
     void addFiles(const QStringList& paths);
     void removeFile(const QString& path);
     void startMonitoring(int intervalMs = 100);
     void stopMonitoring();
     void listFiles() const;
+    bool isMonitoring() const { return m_isMonitoring; }
+
     void checkFiles();
-
-private slots:
-    void onFileCreated(const QString& path, int size);
-    void onFileDeleted(const QString& path);
-    void onFileModified(const QString& path, int newSize, int oldSize);
-
 private:
     FileManager(QObject* parent = nullptr);
-    ~FileManager();
+    ~FileManager() = default;
 
-    QMap<QString, QSharedPointer<File>> m_files;
-    QTimer* m_timer;
+    QMap<QString, FileState> m_files;
     bool m_isMonitoring;
+    std::shared_ptr<Logger> m_logger;
 };
 
 #endif

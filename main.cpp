@@ -1,10 +1,11 @@
 #include <QCoreApplication>
-#include <QMetaObject>
 #include <thread>
+#include <chrono>
+#include <memory>
 #include <iostream>
-#include <QDebug>
-#include <QString>
+#include <winnls.h>
 #include "filemanager.h"
+#include "consolelogger.h"
 
 #ifdef Q_OS_WINDOWS
 #include <windows.h>
@@ -19,92 +20,81 @@ void setupConsole()
     setbuf(stdin, NULL);
 #endif
 }
-
-
-int main(int argc, char *argv[])
+void printHelp()
 {
-    setupConsole();
-    QCoreApplication app(argc, argv);
-    qDebug() << QString::fromUtf8("Введите команду: ");
+    std::cout << "КОМАНДЫ:\n";
+    std::cout << "  add <путь1,путь2,...> - добавить файлы\n";
+    std::cout << "  remove <путь> - удалить файл\n";
+    std::cout << "  list - показать файлы\n";
+    std::cout << "  start - запустить мониторинг\n";
+    std::cout << "  stop - остановить мониторинг\n";
+    std::cout << "  help - справка\n";
+    std::cout << "  exit - выход\n";
+}
 
-
+int main()
+{
+    auto logger = std::make_shared<ConsoleLogger>();
     FileManager& manager = FileManager::getInstance();
+    manager.setLogger(logger);
 
-    std::thread inputThread([&]() {
+    printHelp();
 
-        std::string input;
+    std::atomic<bool> running{true};
 
-        while (true) {
-
-            if (!std::getline(std::cin, input))
-                continue;
-
-            if (input.empty()) {
-                continue;
+    std::thread monitorThread([&]() {
+        while (running) {
+            if (manager.isMonitoring()) {
+                manager.checkFiles();
             }
-
-            QString line = QString::fromStdString(input);
-
-            QMetaObject::invokeMethod(
-                &app,
-                [&, line]() {
-
-                    QStringList parts =
-                        line.split(' ', Qt::SkipEmptyParts);
-
-                    if (parts.isEmpty()) {
-                        return;
-                    }
-
-                    QString command =
-                        parts[0].toLower();
-
-                    if (command == "exit" ||
-                        command == "quit") {
-                        qDebug() << "Завершение программы...\n ";
-                        app.quit();
-                        return;
-                    }
-                    else if (command == "add" &&
-                             parts.size() > 1) {
-                        QStringList files =
-                            parts[1].split(',', Qt::SkipEmptyParts);
-                        manager.addFiles(files);
-                    }
-                    else if (command == "remove" &&
-                             parts.size() > 1) {
-                        manager.removeFile(parts[1]);
-                    }
-                    else if (command == "list") {
-                        manager.listFiles();
-                    }
-                    else if (command == "start") {
-                        int interval = 100;
-
-                        if (parts.size() > 1) {
-                            bool ok;
-                            int customInterval =
-                                parts[1].toInt(&ok);
-                            if (ok && customInterval > 0)
-                                interval = customInterval;
-                        }
-
-                        manager.startMonitoring(interval);
-                    }
-                    else if (command == "stop") {
-                        manager.stopMonitoring();
-                    }
-                    else {
-                        qDebug() << QString::fromUtf8("Неизвестная программа\n ");
-                    }
-
-                },
-                Qt::QueuedConnection
-                );
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     });
 
-    inputThread.detach();
+    std::string input;
+    while (true) {
+        std::cout << "\n> Введите команду: " << std::flush;
+        std::getline(std::cin, input);
 
-    return app.exec();
+        if (input.empty()) continue;
+
+        QString line = QString::fromStdString(input);
+        QStringList parts = line.split(' ', Qt::SkipEmptyParts);
+        QString cmd = parts[0].toLower();
+
+        if (cmd == "exit" || cmd == "quit") {
+            std::cout << "Завершение программы..." << std::endl;
+            running = false;
+            break;
+        }
+        else if (cmd == "help") {
+            printHelp();
+        }
+        else if (cmd == "add" && parts.size() > 1) {
+            QStringList files = parts[1].split(',', Qt::SkipEmptyParts);
+            manager.addFiles(files);
+        }
+        else if (cmd == "remove" && parts.size() > 1) {
+            manager.removeFile(parts[1]);
+        }
+        else if (cmd == "list") {
+            manager.listFiles();
+        }
+        else if (cmd == "start") {
+            manager.startMonitoring();
+        }
+        else if (cmd == "start" && parts.size() > 1) {
+            int interval = parts[1].toInt();
+            manager.startMonitoring(interval);
+        }
+        else if (cmd == "stop") {
+            manager.stopMonitoring();
+        }
+        else {
+            std::cout << "Неизвестная команда" << std::endl;
+        }
+    }
+
+    monitorThread.join();
+    return 0;
 }

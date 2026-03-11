@@ -19,6 +19,10 @@ add_executable(FileManager
 
 
   file.h file.cpp
+  logger.h
+  consolelogger.h
+  consolelogger.h
+  consolelogger.h
 
 
 
