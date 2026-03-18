@@ -1,7 +1,5 @@
-// filemanager.h
 #ifndef FILEMANAGER_H
 #define FILEMANAGER_H
-
 #include <QObject>
 #include <QMap>
 #include <QFileInfo>

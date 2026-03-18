@@ -65,8 +65,8 @@ void FileManager::listFiles() const
     } else {
         for (auto it = m_files.constBegin(); it != m_files.constEnd(); ++it) {
             QString status = it.value().exists ? "существует" : "не существует";
-            m_logger->logInfo(QString("  %1 - %2 (размер: %3 байт)")
-                                  .arg(it.key()).arg(status).arg(it.value().size));
+            m_logger->logInfo(QStringLiteral("  %1 - %2 (размер: %3 байт)")
+                                  .arg(it.key(), status, QString::number(it.value().size)));
         }
     }
 }
@@ -85,6 +85,7 @@ void FileManager::startMonitoring(int intervalMs)
     } else {
         m_logger->logError("Мониторинг уже запущен");
     }
+
 }
 
 void FileManager::stopMonitoring()
@@ -121,6 +122,7 @@ void FileManager::checkFiles()
         else if (nowExists && oldState.exists && nowSize != oldState.size) {
             m_logger->logFileModified(path, oldState.size, nowSize);
         }
+
 
         oldState.exists = nowExists;
         oldState.size = nowSize;

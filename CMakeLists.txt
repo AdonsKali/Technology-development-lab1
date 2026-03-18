@@ -18,7 +18,7 @@ add_executable(FileManager
   filemanager.h filemanager.cpp
 
 
-  file.h file.cpp
+
   logger.h
   consolelogger.h
   consolelogger.h

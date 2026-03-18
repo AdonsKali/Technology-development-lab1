@@ -11,11 +11,29 @@
 #include <windows.h>
 #endif
 
+#include <windows.h>
+
+QString toQStringCP866(const std::string& str)
+{
+#ifdef Q_OS_WINDOWS
+    int wideSize = MultiByteToWideChar(866, 0, str.c_str(), -1, NULL, 0);
+    if (wideSize > 0) {
+        std::wstring wstr(wideSize, L'\0');
+        MultiByteToWideChar(866, 0, str.c_str(), -1, &wstr[0], wideSize);
+
+
+        wstr.resize(wideSize - 1);
+        return QString::fromStdWString(wstr);
+    }
+    return QString::fromLocal8Bit(str.c_str());
+
+#endif
+}
+
 void setupConsole()
 {
 #ifdef Q_OS_WINDOWS
     SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
     setbuf(stdout, NULL);
     setbuf(stdin, NULL);
 #endif
@@ -32,15 +50,17 @@ void printHelp()
     std::cout << "  exit - выход\n";
 }
 
+
 int main()
 {
+    setupConsole();
     auto logger = std::make_shared<ConsoleLogger>();
     FileManager& manager = FileManager::getInstance();
     manager.setLogger(logger);
 
     printHelp();
 
-    std::atomic<bool> running{true};
+    bool running = true;
 
     std::thread monitorThread([&]() {
         while (running) {
@@ -51,14 +71,14 @@ int main()
         }
     });
 
-    std::string input;
     while (true) {
         std::cout << "\n> Введите команду: " << std::flush;
+        std::string input;
         std::getline(std::cin, input);
 
-        if (input.empty()) continue;
+        QString line =toQStringCP866(input);
+        if (line.isEmpty()) continue;
 
-        QString line = QString::fromStdString(input);
         QStringList parts = line.split(' ', Qt::SkipEmptyParts);
         QString cmd = parts[0].toLower();
 
@@ -81,11 +101,12 @@ int main()
             manager.listFiles();
         }
         else if (cmd == "start") {
-            manager.startMonitoring();
-        }
-        else if (cmd == "start" && parts.size() > 1) {
-            int interval = parts[1].toInt();
-            manager.startMonitoring(interval);
+            if (parts.size() > 1) {
+                int interval = parts[1].toInt();
+                manager.startMonitoring(interval);
+            } else {
+                manager.startMonitoring();
+            }
         }
         else if (cmd == "stop") {
             manager.stopMonitoring();
