@@ -66,6 +66,17 @@ public:
     }
 
     void logPrompt() override { std::cout << "\n> Введите команду: " << std::flush; }
+
+    void printHelp (){
+            std::cout << "КОМАНДЫ:\n";
+            std::cout << "  add <путь1,путь2,...> - добавить файлы\n";
+            std::cout << "  remove <путь> - удалить файл\n";
+            std::cout << "  list - показать файлы\n";
+            std::cout << "  start - запустить мониторинг\n";
+            std::cout << "  stop - остановить мониторинг\n";
+            std::cout << "  help - справка\n";
+            std::cout << "  exit - выход\n";
+        };
 };
 
 #endif

@@ -71,7 +71,7 @@ void FileManager::listFiles() const
     }
 }
 
-void FileManager::startMonitoring(int intervalMs)
+void FileManager::startMonitoring()
 {
     if (!m_logger) return;
 
@@ -81,7 +81,7 @@ void FileManager::startMonitoring(int intervalMs)
             return;
         }
         m_isMonitoring = true;
-        m_logger->logMonitoringStarted(intervalMs);
+        m_logger->logMonitoringStarted(100);
     } else {
         m_logger->logError("Мониторинг уже запущен");
     }

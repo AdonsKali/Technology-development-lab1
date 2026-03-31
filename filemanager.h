@@ -21,20 +21,19 @@ class FileManager : public QObject
 public:
     static FileManager& getInstance();
 
-    FileManager(const FileManager&) = delete;
-    FileManager& operator=(const FileManager&) = delete;
-
     void setLogger(std::shared_ptr<Logger> logger);
 
     void addFiles(const QStringList& paths);
     void removeFile(const QString& path);
-    void startMonitoring(int intervalMs = 100);
+    void startMonitoring();
     void stopMonitoring();
     void listFiles() const;
     bool isMonitoring() const { return m_isMonitoring; }
 
     void checkFiles();
 private:
+    FileManager(const FileManager&) = delete;
+    FileManager& operator=(const FileManager&) = delete;
     FileManager(QObject* parent = nullptr);
     ~FileManager() = default;
 

@@ -38,17 +38,6 @@ void setupConsole()
     setbuf(stdin, NULL);
 #endif
 }
-void printHelp()
-{
-    std::cout << "КОМАНДЫ:\n";
-    std::cout << "  add <путь1,путь2,...> - добавить файлы\n";
-    std::cout << "  remove <путь> - удалить файл\n";
-    std::cout << "  list - показать файлы\n";
-    std::cout << "  start - запустить мониторинг\n";
-    std::cout << "  stop - остановить мониторинг\n";
-    std::cout << "  help - справка\n";
-    std::cout << "  exit - выход\n";
-}
 
 
 int main()
@@ -58,7 +47,7 @@ int main()
     FileManager& manager = FileManager::getInstance();
     manager.setLogger(logger);
 
-    printHelp();
+    logger->printHelp();
 
     bool running = true;
 
@@ -88,7 +77,7 @@ int main()
             break;
         }
         else if (cmd == "help") {
-            printHelp();
+            logger->printHelp();
         }
         else if (cmd == "add" && parts.size() > 1) {
             QStringList files = parts[1].split(',', Qt::SkipEmptyParts);
@@ -103,7 +92,7 @@ int main()
         else if (cmd == "start") {
             if (parts.size() > 1) {
                 int interval = parts[1].toInt();
-                manager.startMonitoring(interval);
+                manager.startMonitoring();
             } else {
                 manager.startMonitoring();
             }
