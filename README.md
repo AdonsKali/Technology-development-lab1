@@ -49,14 +49,13 @@ stopMonitoring() - остановка мониторинга
 listFiles() - вывод списка файлов
 checkFiles() - проверка изменений файлов
 
-UML-диаграмма (https://drive.google.com/file/d/12165x1_xOokjeGLCl5pz6tfMdJ0QRHhu/view?usp=sharing)
-
 4. FileState (структура)
 Хранит состояние файла между проверками.
 Поля:
 exists - существует ли файл
 size - размер файла в байтах
 
+UML-диаграмма (https://drive.google.com/file/d/12165x1_xOokjeGLCl5pz6tfMdJ0QRHhu/view?usp=sharing)
 
 Инструкция пользователя
 Команда	Описание

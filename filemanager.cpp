@@ -4,7 +4,10 @@
 FileManager::FileManager(QObject* parent)
     : QObject(parent)
     , m_isMonitoring(false)
+    , m_monitorTimer(new QTimer(this))
 {
+    connect(m_monitorTimer, &QTimer::timeout, this, &FileManager::checkFiles);
+    connectSignalsToLogger();
 }
 
 FileManager& FileManager::getInstance()
@@ -16,6 +19,39 @@ FileManager& FileManager::getInstance()
 void FileManager::setLogger(std::shared_ptr<Logger> logger)
 {
     m_logger = logger;
+    connectSignalsToLogger();
+}
+
+void FileManager::connectSignalsToLogger()
+{
+    if (!m_logger) return;
+    connect(this, &FileManager::fileAdded, this, [this](const QString& path) {
+        if (m_logger) m_logger->logFileAdded(path);
+    });
+    connect(this, &FileManager::fileRemoved, this, [this](const QString& path) {
+        if (m_logger) m_logger->logFileRemoved(path);
+    });
+    connect(this, &FileManager::fileCreated, this, [this](const QString& path, qint64 size) {
+        if (m_logger) m_logger->logFileCreated(path, size);
+    });
+    connect(this, &FileManager::fileDeleted, this, [this](const QString& path) {
+        if (m_logger) m_logger->logFileDeleted(path);
+    });
+    connect(this, &FileManager::fileModified, this, [this](const QString& path, qint64 oldSize, qint64 newSize) {
+        if (m_logger) m_logger->logFileModified(path, oldSize, newSize);
+    });
+    connect(this, &FileManager::monitoringStarted, this, [this](int interval) {
+        if (m_logger) m_logger->logMonitoringStarted(interval);
+    });
+    connect(this, &FileManager::monitoringStopped, this, [this]() {
+        if (m_logger) m_logger->logMonitoringStopped();
+    });
+    connect(this, &FileManager::errorOccurred, this, [this](const QString& message) {
+        if (m_logger) m_logger->logError(message);
+    });
+    connect(this, &FileManager::infoMessage, this, [this](const QString& message) {
+        if (m_logger) m_logger->logInfo(message);
+    });
 }
 
 void FileManager::addFiles(const QStringList& paths)
@@ -34,9 +70,9 @@ void FileManager::addFiles(const QStringList& paths)
             qint64 size = exists ? info.size() : 0;
 
             m_files[normalizedPath] = FileState(exists, size);
-            m_logger->logFileAdded(normalizedPath);
+            emit fileAdded(normalizedPath);
         } else {
-            m_logger->logError("Файл уже отслеживается: " + normalizedPath);
+            emit errorOccurred("Файл уже отслеживается: " + normalizedPath);
         }
     }
 }
@@ -49,43 +85,43 @@ void FileManager::removeFile(const QString& path)
 
     if (m_files.contains(normalizedPath)) {
         m_files.remove(normalizedPath);
-        m_logger->logFileRemoved(normalizedPath);
+        emit fileRemoved(normalizedPath);
     } else {
-        m_logger->logError("Файл не найден: " + normalizedPath);
+        emit errorOccurred("Файл не найден: " + normalizedPath);
     }
 }
 
-void FileManager::listFiles() const
+void FileManager::listFiles()
 {
     if (!m_logger) return;
 
-    m_logger->logInfo("=== Отслеживаемые файлы ===");
+    emit infoMessage("=== Отслеживаемые файлы ===");
     if (m_files.isEmpty()) {
-        m_logger->logInfo("Список пуст");
+        emit infoMessage("Список пуст");
     } else {
         for (auto it = m_files.constBegin(); it != m_files.constEnd(); ++it) {
             QString status = it.value().exists ? "существует" : "не существует";
-            m_logger->logInfo(QStringLiteral("  %1 - %2 (размер: %3 байт)")
-                                  .arg(it.key(), status, QString::number(it.value().size)));
+            emit infoMessage(QStringLiteral("  %1 - %2 (размер: %3 байт)")
+                                 .arg(it.key(), status, QString::number(it.value().size)));
         }
     }
 }
 
-void FileManager::startMonitoring()
+void FileManager::startMonitoring(int intervalMs)
 {
     if (!m_logger) return;
 
     if (!m_isMonitoring) {
         if (m_files.isEmpty()) {
-            m_logger->logError("Нет файлов для отслеживания");
+            emit errorOccurred("Нет файлов для отслеживания");
             return;
         }
         m_isMonitoring = true;
-        m_logger->logMonitoringStarted(100);
+        m_monitorTimer->start(intervalMs);
+        emit monitoringStarted(intervalMs);
     } else {
-        m_logger->logError("Мониторинг уже запущен");
+        emit errorOccurred("Мониторинг уже запущен");
     }
-
 }
 
 void FileManager::stopMonitoring()
@@ -94,15 +130,16 @@ void FileManager::stopMonitoring()
 
     if (m_isMonitoring) {
         m_isMonitoring = false;
-        m_logger->logMonitoringStopped();
+        m_monitorTimer->stop();
+        emit monitoringStopped();
     } else {
-        m_logger->logError("Мониторинг не был запущен");
+        emit errorOccurred("Мониторинг не был запущен");
     }
 }
 
 void FileManager::checkFiles()
 {
-    if (!m_isMonitoring || !m_logger) return;
+    if (!m_isMonitoring) return;
 
     for (auto it = m_files.begin(); it != m_files.end(); ++it) {
         const QString& path = it.key();
@@ -114,15 +151,14 @@ void FileManager::checkFiles()
 
         if (nowExists != oldState.exists) {
             if (nowExists) {
-                m_logger->logFileCreated(path, nowSize);
+                emit fileCreated(path, nowSize);
             } else {
-                m_logger->logFileDeleted(path);
+                emit fileDeleted(path);
             }
         }
         else if (nowExists && oldState.exists && nowSize != oldState.size) {
-            m_logger->logFileModified(path, oldState.size, nowSize);
+            emit fileModified(path, oldState.size, nowSize);
         }
-
 
         oldState.exists = nowExists;
         oldState.size = nowSize;

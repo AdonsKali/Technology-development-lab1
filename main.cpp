@@ -1,17 +1,12 @@
 #include <QCoreApplication>
-#include <thread>
-#include <chrono>
 #include <memory>
 #include <iostream>
 #include <winnls.h>
 #include "filemanager.h"
+#include <QThread>
 #include "consolelogger.h"
-
-#ifdef Q_OS_WINDOWS
 #include <windows.h>
-#endif
 
-#include <windows.h>
 
 QString toQStringCP866(const std::string& str)
 {
@@ -40,71 +35,88 @@ void setupConsole()
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
+    QCoreApplication app(argc, argv);
     setupConsole();
+
     auto logger = std::make_shared<ConsoleLogger>();
     FileManager& manager = FileManager::getInstance();
     manager.setLogger(logger);
 
     logger->printHelp();
 
+    QThread inputThread;
     bool running = true;
 
-    std::thread monitorThread([&]() {
+    QObject::connect(&inputThread, &QThread::started, [&]() {
         while (running) {
-            if (manager.isMonitoring()) {
-                manager.checkFiles();
+            std::cout << "\n> Введите команду: " << std::flush;
+            std::string input;
+            std::getline(std::cin, input);
+
+            if (!running) break;
+            if (input.empty()) continue;
+
+            QString line = toQStringCP866(input);
+            QStringList parts = line.split(' ', Qt::SkipEmptyParts);
+            if (parts.isEmpty()) continue;
+
+            QString cmd = parts[0].toLower();
+
+            if (cmd == "exit" || cmd == "quit") {
+                std::cout << "Завершение программы..." << std::endl;
+                running = false;
+                QMetaObject::invokeMethod(&app, &QCoreApplication::quit, Qt::QueuedConnection);
+                break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            else if (cmd == "help") {
+                logger->printHelp();
+            }
+            else if (cmd == "add" && parts.size() > 1) {
+                QStringList files = parts[1].split(',', Qt::SkipEmptyParts);
+                QMetaObject::invokeMethod(&manager, [&manager, files]() {
+                    manager.addFiles(files);
+                }, Qt::QueuedConnection);
+            }
+            else if (cmd == "remove" && parts.size() > 1) {
+                QString path = parts[1];
+                QMetaObject::invokeMethod(&manager, [&manager, path]() {
+                    manager.removeFile(path);
+                }, Qt::QueuedConnection);
+            }
+            else if (cmd == "list") {
+                QMetaObject::invokeMethod(&manager, [&manager]() {
+                    manager.listFiles();
+                }, Qt::QueuedConnection);
+            }
+            else if (cmd == "start") {
+                int interval = 100;
+                if (parts.size() > 1) {
+                    interval = parts[1].toInt();
+                    if (interval <= 0) interval = 100;
+                }
+                QMetaObject::invokeMethod(&manager, [&manager, interval]() {
+                    manager.startMonitoring(interval);
+                }, Qt::QueuedConnection);
+            }
+            else if (cmd == "stop") {
+                QMetaObject::invokeMethod(&manager, [&manager]() {
+                    manager.stopMonitoring();
+                }, Qt::QueuedConnection);
+            }
+            else {
+                std::cout << "Неизвестная команда. Введите 'help' для справки." << std::endl;
+            }
         }
     });
 
-    while (true) {
-        std::cout << "\n> Введите команду: " << std::flush;
-        std::string input;
-        std::getline(std::cin, input);
+    inputThread.start();
 
-        QString line =toQStringCP866(input);
-        if (line.isEmpty()) continue;
+    int result = app.exec();
+    running = false;
+    inputThread.quit();
+    inputThread.wait();
 
-        QStringList parts = line.split(' ', Qt::SkipEmptyParts);
-        QString cmd = parts[0].toLower();
-
-        if (cmd == "exit" || cmd == "quit") {
-            std::cout << "Завершение программы..." << std::endl;
-            running = false;
-            break;
-        }
-        else if (cmd == "help") {
-            logger->printHelp();
-        }
-        else if (cmd == "add" && parts.size() > 1) {
-            QStringList files = parts[1].split(',', Qt::SkipEmptyParts);
-            manager.addFiles(files);
-        }
-        else if (cmd == "remove" && parts.size() > 1) {
-            manager.removeFile(parts[1]);
-        }
-        else if (cmd == "list") {
-            manager.listFiles();
-        }
-        else if (cmd == "start") {
-            if (parts.size() > 1) {
-                int interval = parts[1].toInt();
-                manager.startMonitoring();
-            } else {
-                manager.startMonitoring();
-            }
-        }
-        else if (cmd == "stop") {
-            manager.stopMonitoring();
-        }
-        else {
-            std::cout << "Неизвестная команда" << std::endl;
-        }
-    }
-
-    monitorThread.join();
-    return 0;
+    return result;
 }
