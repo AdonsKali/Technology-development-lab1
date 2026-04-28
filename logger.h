@@ -3,12 +3,16 @@
 
 #include <QString>
 #include <QDateTime>
+#include <QObject>
 
-class Logger
+class Logger: public QObject
 {
+    Q_OBJECT
 public:
     virtual ~Logger() = default;
 
+
+public slots:
     virtual void logFileAdded(const QString& path) = 0;
     virtual void logFileRemoved(const QString& path) = 0;
     virtual void logFileCreated(const QString& path, qint64 size) = 0;

@@ -7,6 +7,8 @@
 
 class ConsoleLogger : public Logger
 {
+    Q_OBJECT
+
 public:
     ConsoleLogger() = default;
 

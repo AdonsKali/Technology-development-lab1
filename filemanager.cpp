@@ -7,7 +7,6 @@ FileManager::FileManager(QObject* parent)
     , m_monitorTimer(new QTimer(this))
 {
     connect(m_monitorTimer, &QTimer::timeout, this, &FileManager::checkFiles);
-    connectSignalsToLogger();
 }
 
 FileManager& FileManager::getInstance()
@@ -18,40 +17,19 @@ FileManager& FileManager::getInstance()
 
 void FileManager::setLogger(std::shared_ptr<Logger> logger)
 {
+    disconnect(this, nullptr, nullptr, nullptr);
     m_logger = logger;
-    connectSignalsToLogger();
-}
 
-void FileManager::connectSignalsToLogger()
-{
     if (!m_logger) return;
-    connect(this, &FileManager::fileAdded, this, [this](const QString& path) {
-        if (m_logger) m_logger->logFileAdded(path);
-    });
-    connect(this, &FileManager::fileRemoved, this, [this](const QString& path) {
-        if (m_logger) m_logger->logFileRemoved(path);
-    });
-    connect(this, &FileManager::fileCreated, this, [this](const QString& path, qint64 size) {
-        if (m_logger) m_logger->logFileCreated(path, size);
-    });
-    connect(this, &FileManager::fileDeleted, this, [this](const QString& path) {
-        if (m_logger) m_logger->logFileDeleted(path);
-    });
-    connect(this, &FileManager::fileModified, this, [this](const QString& path, qint64 oldSize, qint64 newSize) {
-        if (m_logger) m_logger->logFileModified(path, oldSize, newSize);
-    });
-    connect(this, &FileManager::monitoringStarted, this, [this](int interval) {
-        if (m_logger) m_logger->logMonitoringStarted(interval);
-    });
-    connect(this, &FileManager::monitoringStopped, this, [this]() {
-        if (m_logger) m_logger->logMonitoringStopped();
-    });
-    connect(this, &FileManager::errorOccurred, this, [this](const QString& message) {
-        if (m_logger) m_logger->logError(message);
-    });
-    connect(this, &FileManager::infoMessage, this, [this](const QString& message) {
-        if (m_logger) m_logger->logInfo(message);
-    });
+    connect(this, &FileManager::fileAdded, m_logger.get(), &Logger::logFileAdded);
+    connect(this, &FileManager::fileRemoved, m_logger.get(), &Logger::logFileRemoved);
+    connect(this, &FileManager::fileCreated, m_logger.get(), &Logger::logFileCreated);
+    connect(this, &FileManager::fileDeleted, m_logger.get(), &Logger::logFileDeleted);
+    connect(this, &FileManager::fileModified, m_logger.get(), &Logger::logFileModified);
+    connect(this, &FileManager::monitoringStarted, m_logger.get(), &Logger::logMonitoringStarted);
+    connect(this, &FileManager::monitoringStopped, m_logger.get(), &Logger::logMonitoringStopped);
+    connect(this, &FileManager::errorOccurred, m_logger.get(), &Logger::logError);
+    connect(this, &FileManager::infoMessage, m_logger.get(), &Logger::logInfo);
 }
 
 void FileManager::addFiles(const QStringList& paths)

@@ -50,8 +50,6 @@ private:
     FileManager(QObject* parent = nullptr);
     ~FileManager() = default;
 
-    void connectSignalsToLogger();
-
     QMap<QString, FileState> m_files;
     bool m_isMonitoring;
     std::shared_ptr<Logger> m_logger;
