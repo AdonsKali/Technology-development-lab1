@@ -50,7 +50,7 @@ void FileManager::addFiles(const QStringList& paths)
             m_files[normalizedPath] = FileState(exists, size);
             emit fileAdded(normalizedPath);
         } else {
-            emit errorOccurred("Файл уже отслеживается: " + normalizedPath);
+            emit infoMessage("Файл уже отслеживается: " + normalizedPath);
         }
     }
 }
@@ -91,14 +91,14 @@ void FileManager::startMonitoring(int intervalMs)
 
     if (!m_isMonitoring) {
         if (m_files.isEmpty()) {
-            emit errorOccurred("Нет файлов для отслеживания");
+            emit infoMessage("Нет файлов для отслеживания");
             return;
         }
         m_isMonitoring = true;
         m_monitorTimer->start(intervalMs);
         emit monitoringStarted(intervalMs);
     } else {
-        emit errorOccurred("Мониторинг уже запущен");
+        emit infoMessage("Мониторинг уже запущен");
     }
 }
 
