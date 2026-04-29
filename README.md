@@ -93,17 +93,23 @@ Case 4: Добавление несуществующего файла
 Case 5: Добавления существующего файла
 Вход: add C:\Users\AdonsKali\Desktop\file1.txt
       add C:\Users\AdonsKali\Desktop\file1.txt
-Результат: Файл уже отслеживается    
+Результат: Файл уже отслеживается  
+
+
+Case 6: Удаление файла
+Вход: add C:\Users\AdonsKali\Desktop\file1.txt
+      remove C:\Users\AdonsKali\Desktop\file1.txt
+Результат: Файл успешно удален из отслеживания
 
  
-Case 6: Удаление несуществующего файла
+Case 7: Удаление несуществующего файла
 Вход: add C:\Users\AdonsKali\Desktop\file1.txt
       remove C:\Users\AdonsKali\Desktop\file1.txt
       remove C:\Users\AdonsKali\Desktop\file1.txt
 Результат: Файл не найден
 
 
-Case 7: Запуск мониторинга с пустым списком
+Case 8: Запуск мониторинга с пустым списком
 Вход: start 
 Результат: Нет файлов для отслеживания
 
